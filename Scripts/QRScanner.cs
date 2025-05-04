@@ -12,6 +12,11 @@ public class QRScanner : MonoBehaviour
     private bool qrDetected = false;
     private GameObject currentModel;
     public float baseScale = 1f;
+  
+    public float sceneWidth = 5f;
+    public float sceneHeight = 3f;
+
+    public float rotationSensitivity = 0.2f;
 
     void Start()
     {
@@ -91,7 +96,8 @@ public class QRScanner : MonoBehaviour
         if (loadedModel != null)
         {
             currentModel = Instantiate(loadedModel, modelParent);
-            currentModel.transform.localPosition = Vector3.zero;
+           
+            currentModel.transform.localPosition = GetModelPositionFromQR(qrPoints);
             currentModel.transform.localRotation = Quaternion.identity;
             AdjustModelScale(qrPoints);
             Debug.Log($"Modelo {modelName} cargado en la escena.");
@@ -100,6 +106,31 @@ public class QRScanner : MonoBehaviour
         {
             Debug.LogWarning($"No se encontró el modelo: {modelName}");
         }
+    }
+
+ 
+    Vector3 GetModelPositionFromQR(ResultPoint[] qrPoints)
+    {
+        if (qrPoints == null || qrPoints.Length < 2 || webcamTexture == null) return Vector3.zero;
+
+    
+        float centerX = 0f, centerY = 0f;
+        foreach (var p in qrPoints)
+        {
+            centerX += p.X;
+            centerY += p.Y;
+        }
+        centerX /= qrPoints.Length;
+        centerY /= qrPoints.Length;
+
+       
+        float normX = (centerX / webcamTexture.width) - 0.5f;
+        float normY = (centerY / webcamTexture.height) - 0.5f;
+
+        float posX = normX * sceneWidth;
+        float posY = normY * sceneHeight;
+
+        return new Vector3(posX, posY, 0f);
     }
 
     void AdjustModelScale(ResultPoint[] qrPoints)
@@ -132,9 +163,15 @@ public class QRScanner : MonoBehaviour
             {
                 Vector2 delta = touch.deltaPosition;
 
-                // Mover el modelo horizontalmente con el dedo
+             
                 float moveSpeed = 0.005f;
                 currentModel.transform.localPosition += new Vector3(delta.x * moveSpeed, delta.y * moveSpeed, 0f);
+
+                float rotateX = -delta.y * rotationSensitivity; 
+                float rotateY = -delta.x * rotationSensitivity; 
+
+                currentModel.transform.Rotate(Vector3.right, rotateX, Space.Self);
+                currentModel.transform.Rotate(Vector3.up, rotateY, Space.World);
             }
         }
     }
